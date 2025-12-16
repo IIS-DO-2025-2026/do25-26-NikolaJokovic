@@ -1,0 +1,106 @@
+package controller;
+
+import java.awt.Color;
+import java.util.ArrayList;
+
+import draw.PnlDraw;
+import geometrija.Circle;
+import geometrija.Donut;
+import geometrija.HexagonAdapter;
+import geometrija.Point;
+import geometrija.Rectangle;
+import geometrija.Shape;
+
+public class UpdateShapeCommand implements Command {
+
+	private final ArrayList<Shape> shapes;
+    private final int index;
+    private final PnlDraw panel;
+
+    private final Shape oldState;
+    private final Shape newState; 
+
+    public UpdateShapeCommand(ArrayList<Shape> shapes, int index, Shape oldState, Shape newState, PnlDraw panel) {
+        this.shapes = shapes;
+        this.index = index;
+        this.oldState = oldState;
+        this.newState = newState;
+        this.panel = panel;
+    }
+
+    @Override
+    public void execute() {
+        shapes.set(index, newState);
+        panel.repaint();
+    }
+
+    @Override
+    public void unexecute() {
+        shapes.set(index, oldState);
+        panel.repaint();
+    }
+    @Override
+	public String toLog() {
+	    return "EDITED|" + shapeToLogString(oldState)+ " TO|"+ shapeToLogString(newState);
+	   
+	}
+	
+	private String shapeToLogString(Shape s) {
+
+	        if (s instanceof Point ) {
+	        	Point p= (Point)s;
+	            return "POINT|" + p.getX() + "|" + p.getY() + "|" + colorToString(p.getColor());
+	        }
+
+	        if (s instanceof Circle ) {
+	            Circle c=(Circle) s;
+	        	
+	        	return "CIRCLE|" +
+	                   c.getCenter().getX() + "|" +
+	                   c.getCenter().getY() + "|" +
+	                   c.getRadius() + "|" +
+	                   colorToString(c.getColor()) + "|" +
+	                   colorToString(c.getInnerColor());
+	        }
+
+	        if (s instanceof Donut) {
+	        	Donut d=(Donut) s;
+	        	
+	            return "DONUT|" +
+	                   d.getCenter().getX() + "|" +
+	                   d.getCenter().getY() + "|" +
+	                   d.getRadius() + "|" +
+	                   d.getInnerRadius() + "|" +
+	                   colorToString(d.getColor()) + "|" +
+	                   colorToString(d.getInnerColor());
+	        }
+
+	        if (s instanceof Rectangle) {
+	        	Rectangle r= (Rectangle) s;
+	        	
+	            return "RECTANGLE|" +
+	                   r.getUpperLeftPoint().getX() + "|" +
+	                   r.getUpperLeftPoint().getY() + "|" +
+	                   r.getWidth() + "|" +
+	                   r.getHeight() + "|" +
+	                   colorToString(r.getColor()) + "|" +
+	                   colorToString(r.getInnerColor());
+	        }
+
+	        if (s instanceof HexagonAdapter) {
+	        	HexagonAdapter h = (HexagonAdapter) s;
+	        	
+	            return "HEXAGON|" +
+	                   h.getHexagon().getX() + "|" +
+	                   h.getHexagon().getY() + "|" +
+	                   h.getHexagon().getR() + "|" +
+	                   colorToString(h.getColor()) + "|" +
+	                   colorToString(h.getInnerColor());
+	        }
+
+	        throw new IllegalArgumentException("Unknown shape type");
+	    }
+	    private String colorToString(Color c) {
+	        return c.getRed() + "," + c.getGreen() + "," + c.getBlue();
+	    }	 
+}
