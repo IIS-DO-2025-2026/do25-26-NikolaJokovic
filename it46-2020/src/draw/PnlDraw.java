@@ -11,6 +11,7 @@ import javax.swing.JPopupMenu;
 
 import controller.AddShape;
 import controller.CommandManager;
+import controller.ModelObserver;
 import controller.ZAxisAction;
 import controller.ZAxisCommand;
 import geometrija.Circle;
@@ -27,7 +28,7 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-public class PnlDraw extends JPanel {
+public class PnlDraw extends JPanel implements ModelObserver{
 
 
 	private FrmDraw frame;
@@ -37,6 +38,7 @@ public class PnlDraw extends JPanel {
 	private Point p1;
 	private int indexOfSelectedElement = -1;
 	private CommandManager commandManager;
+	private DrawingModel model;
 	
 	private JPopupMenu popup;
 	private JMenuItem miToFront,miToBack,miBringToFront,miBringToBack;
@@ -45,9 +47,10 @@ public class PnlDraw extends JPanel {
 	/**
 	 * Create the panel.
 	 */
-	public PnlDraw(FrmDraw frame) {
+	public PnlDraw(FrmDraw frame,DrawingModel model) {
 		setBackground(Color.WHITE);
 		this.frame=frame;
+		this.model=model;
 		this.commandManager = frame.getCommandManager();
 		
 		popup = new JPopupMenu();
@@ -57,210 +60,221 @@ public class PnlDraw extends JPanel {
 		miBringToFront = new JMenuItem("Bring To Front");
 		miBringToBack = new JMenuItem("Bring To Back");
 		
-		popup.add(miToFront);
-		popup.add(miToBack);
-		popup.addSeparator();
-		popup.add(miBringToFront);
-		popup.add(miBringToBack);
-		
-		miToFront.addActionListener(ev -> runZOrder(ZAxisAction.TO_FRONT));
-		miToBack.addActionListener(ev -> runZOrder(ZAxisAction.TO_BACK));
-		miBringToFront.addActionListener(ev -> runZOrder(ZAxisAction.BRING_TO_FRONT));
-		miBringToBack.addActionListener(ev -> runZOrder(ZAxisAction.BRING_TO_BACK));
-		
-		addMouseListener(new MouseAdapter() {
-			
-		    @Override
-		    public void mousePressed(MouseEvent e) {
-		        handlePopup(e);
-		    }
-
-		    @Override
-		    public void mouseReleased(MouseEvent e) {
-		        handlePopup(e);
-		    }
-			
-			@Override
-			public void mouseClicked(MouseEvent e) {
-				 p = new Point(e.getX(),e.getY());
-		
-				 if (frame.getTglBtnSelect().isSelected()) {
-
-					    int hitIndex = -1;
-
-					    // nađi najviši shape ispod kursora
-					    for (int i = shapes.size() - 1; i >= 0; i--) {
-					        if (shapes.get(i).contains(p.getX(), p.getY())) {
-					            hitIndex = i;
-					            break;
-					        }
-					    }
-
-					    if (hitIndex == -1) {
-					        for (Shape s : shapes) s.setSelected(false);
-					        indexOfSelectedElement = -1;
-					    } else {
-					        Shape s = shapes.get(hitIndex);
-					        s.setSelected(!s.isSelected());
-					        
-					        if (s.isSelected()) {
-					            indexOfSelectedElement = hitIndex;
-					        } else {
-					            if (indexOfSelectedElement == hitIndex) {
-					                indexOfSelectedElement = findAnySelectedIndex();
-					            }
-					        }
-					    }
-
-					    frame.selectionChanged(getSelectedCount());
-					    repaint();
-					    return;
-					}
-				else if(frame.getTglBtnPoint().isSelected()){
-					p.setColor(frame.getActiveBorderColor());
-					frame.getCommandManager().executeCommand(new AddShape(shapes, p,PnlDraw.this));
-					
-				}
-				else if(frame.getTglBtnLine().isSelected()) {
-					
-					Point drugiKlik;
-				
-					if(clickedFirst == false) {
-						p1 = new Point(e.getX(),e.getY());
-						clickedFirst = true;
-					}
-					else {
-						drugiKlik = new Point(e.getX(),e.getY());
-						Line l = new Line(p1,drugiKlik);
-						clickedFirst = false;
-						l.setColor(frame.getActiveBorderColor());
-						frame.getCommandManager().executeCommand(new AddShape(shapes, l,PnlDraw.this));;
-					}
-				}
-				else if(frame.getTglBtnCircle().isSelected()) {
-					Circle c = new Circle();
-					c.setCenter(new Point (e.getX(), e.getY()));
-					
-					DlgCircle dlgCircle = new DlgCircle();
-					dlgCircle.getTextX().setText(e.getX() + "");
-					dlgCircle.getTextY().setText(e.getY() + "");
-					dlgCircle.getBtnBorderColor().setBackground(frame.getActiveBorderColor());
-					dlgCircle.getBtnInnerColor().setBackground(frame.getActiveInnerColor());
-					dlgCircle.setVisible(true);
-					
-					try {
-						if(dlgCircle.isOk) {
-							c.setRadius(Integer.parseInt(dlgCircle.getTextRadius().getText()));
-							c.setColor(dlgCircle.getBtnBorderColor().getBackground());
-							c.setInnerColor(dlgCircle.getBtnInnerColor().getBackground());
-							frame.getCommandManager().executeCommand(new AddShape(shapes, c,PnlDraw.this));;
-						}
-						
-					} catch (Exception e1) {
-						// TODO Auto-generated catch block
-						//e1.printStackTrace();
-						JOptionPane.showMessageDialog(null, "please enter valid value", "message", JOptionPane.INFORMATION_MESSAGE);
-					}
-					
-				}
-				else if(frame.getTglBtnDonut().isSelected()) {
-							
-						Donut d = new Donut();
-						d.setCenter(new Point (e.getX(), e.getY()));
-						
-						DlgDonut dlgDonut = new DlgDonut();
-						dlgDonut.getTextX().setText(e.getX() + "");
-						dlgDonut.getTextY().setText(e.getY() + "");	
-						dlgDonut.getBtnBorderColor().setBackground(frame.getActiveBorderColor());
-						dlgDonut.getBtnInnerColor().setBackground(frame.getActiveInnerColor());
-						dlgDonut.setVisible(true);
-						try {
-							if(dlgDonut.isOk) {
-								d.setRadius(Integer.parseInt(dlgDonut.getTextRadius().getText()));
-								d.setInnerRadius(Integer.parseInt(dlgDonut.getTextInnerRadius().getText()));
-								d.setColor(dlgDonut.getBtnBorderColor().getBackground());
-								d.setInnerColor(dlgDonut.getBtnInnerColor().getBackground());
-								frame.getCommandManager().executeCommand(new AddShape(shapes, d,PnlDraw.this));
-							}
-						} catch (Exception e1) {
-							// TODO Auto-generated catch block
-							//e1.printStackTrace();
-							JOptionPane.showMessageDialog(null, "please enter valid value", "message", JOptionPane.INFORMATION_MESSAGE);
-						}
-					
-				}
-				else if(frame.getTglBtnRectangle().isSelected()) {
-					
-						Rectangle r = new Rectangle();
-						r.setUpperLeftPoint(new Point(e.getX(),e.getY()));		
-					
-						DlgRectangle dlgRectangle = new DlgRectangle();
-						dlgRectangle.getTextX().setText(e.getX() + "");
-						dlgRectangle.getTextY().setText(e.getY() + "");
-						dlgRectangle.getBtnBorderColor().setBackground(frame.getActiveBorderColor());
-						dlgRectangle.getBtnInnerColor().setBackground(frame.getActiveInnerColor());
-						dlgRectangle.setVisible(true);
-						
-						try {
-							if(dlgRectangle.isOk) {
-								r.setHeight(Integer.parseInt(dlgRectangle.getTextHeight().getText()));
-								r.setWidth(Integer.parseInt(dlgRectangle.getTextWidth().getText()));
-								r.setColor(dlgRectangle.getBtnBorderColor().getBackground());
-								r.setInnerColor(dlgRectangle.getBtnInnerColor().getBackground());
-								frame.getCommandManager().executeCommand(new AddShape(shapes, r,PnlDraw.this));
-							}
-						} catch (Exception e1) {
-							// TODO Auto-generated catch block
-							//e1.printStackTrace();
-							JOptionPane.showMessageDialog(null, "please enter valid value", "message", JOptionPane.INFORMATION_MESSAGE);
-						}
-				}
-				else if(frame.getTglBtnHexagon().isSelected()) {
-					
-					DlgHexagon dlgHexagon = new DlgHexagon();
-					
-				    dlgHexagon.getTextX().setText(e.getX() + "");
-				    dlgHexagon.getTextY().setText(e.getY() + "");
-				    dlgHexagon.getBtnBorderColor().setBackground(frame.getActiveBorderColor());
-					dlgHexagon.getBtnInnerColor().setBackground(frame.getActiveInnerColor());
-				    dlgHexagon.setVisible(true);
-
-				    if (dlgHexagon.isOk) {
-				        try {
-				            int x = Integer.parseInt(dlgHexagon.getTextX().getText());
-				            int y = Integer.parseInt(dlgHexagon.getTextY().getText());
-				            int r = Integer.parseInt(dlgHexagon.getTextR().getText());
-
-				            Color border = dlgHexagon.getBtnBorderColor().getBackground();
-				            Color inner  = dlgHexagon.getBtnInnerColor().getBackground();
-
-				            HexagonAdapter h = new HexagonAdapter(x, y, r, border, inner, false);
-
-
-				            frame.getCommandManager().executeCommand(new AddShape(shapes, h,PnlDraw.this));
-				        } catch (Exception ex) {
-				            JOptionPane.showMessageDialog(null, "Please enter valid values", "Error", JOptionPane.INFORMATION_MESSAGE);
-				        }
-				    }
-				}
-				//repaint();
-			}
+		initPopupMenu();
+		initMouseListener();
 		
 		
-		});
 	}
+		
+	private void initPopupMenu(){
+		
+		popup=new JPopupMenu();
+		miToFront = new JMenuItem("To Front");
+		miToBack = new JMenuItem("To Back");
+        miBringToFront = new JMenuItem("Bring To Front");
+        miBringToBack = new JMenuItem("Bring To Back");
+        
+        popup.add(miToFront);
+        popup.add(miToBack);
+        popup.addSeparator();
+        popup.add(miBringToFront);
+        popup.add(miBringToBack);
+        
+        miToFront.addActionListener(ev->runZOrder(ZAxisAction.TO_FRONT));
+        miToBack.addActionListener(ev->runZOrder(ZAxisAction.TO_BACK));
+        miBringToFront.addActionListener(ev -> runZOrder(ZAxisAction.BRING_TO_FRONT));
+		miBringToBack.addActionListener(ev -> runZOrder(ZAxisAction.BRING_TO_BACK));
+	}
+	private void initMouseListener() {
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                handlePopup(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                handlePopup(e);
+            }
+            
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                handleMouseClick(e);
+            }
+        });
+    }
+	
+	private void handleMouseClick(MouseEvent e) {
+        Point p = new Point(e.getX(), e.getY());
+        
+        if (frame.getTglBtnSelect().isSelected()) {
+            handleSelection(p);
+        } else if (frame.getTglBtnPoint().isSelected()) {
+            handlePointDrawing(p);
+        } else if (frame.getTglBtnLine().isSelected()) {
+            handleLineDrawing(e);
+        } else if (frame.getTglBtnCircle().isSelected()) {
+            handleCircleDrawing(e);
+        } else if (frame.getTglBtnDonut().isSelected()) {
+            handleDonutDrawing(e);
+        } else if (frame.getTglBtnRectangle().isSelected()) {
+            handleRectangleDrawing(e);
+        } else if (frame.getTglBtnHexagon().isSelected()) {
+            handleHexagonDrawing(e);
+        }
+    }
+	 private void handlePointDrawing(Point p) {
+	        p.setColor(frame.getActiveBorderColor());
+	        commandManager.executeCommand(new AddShape(model, p, this));
+	    }
+	    
+	    private void handleLineDrawing(MouseEvent e) {
+	        if (!clickedFirst) {
+	            p1 = new Point(e.getX(), e.getY());
+	            clickedFirst = true;
+	        } else {
+	            Point p2 = new Point(e.getX(), e.getY());
+	            Line l = new Line(p1, p2);
+	            l.setColor(frame.getActiveBorderColor());
+	            commandManager.executeCommand(new AddShape(model, l, this));
+	            clickedFirst = false;
+	        }
+	    }
+	    
+	    private void handleCircleDrawing(MouseEvent e) {
+	        Circle c = new Circle();
+	        c.setCenter(new Point(e.getX(), e.getY()));
+	        
+	        DlgCircle dlg = new DlgCircle();
+	        dlg.getTextX().setText(e.getX() + "");
+	        dlg.getTextY().setText(e.getY() + "");
+	        dlg.getBtnBorderColor().setBackground(frame.getActiveBorderColor());
+	        dlg.getBtnInnerColor().setBackground(frame.getActiveInnerColor());
+	        dlg.setVisible(true);
+	        
+	        if (dlg.isOk) {
+	            try {
+	                c.setRadius(Integer.parseInt(dlg.getTextRadius().getText()));
+	                c.setColor(dlg.getBtnBorderColor().getBackground());
+	                c.setInnerColor(dlg.getBtnInnerColor().getBackground());
+	                commandManager.executeCommand(new AddShape(model, c, this));
+	            } catch (Exception ex) {
+	                JOptionPane.showMessageDialog(null, "Invalid value", "Error", JOptionPane.ERROR_MESSAGE);
+	            }
+	        }
+	    }
+	    
+	    private void handleDonutDrawing(MouseEvent e) {
+	        Donut d = new Donut();
+	        d.setCenter(new Point(e.getX(), e.getY()));
+	        
+	        DlgDonut dlg = new DlgDonut();
+	        dlg.getTextX().setText(e.getX() + "");
+	        dlg.getTextY().setText(e.getY() + "");
+	        dlg.getBtnBorderColor().setBackground(frame.getActiveBorderColor());
+	        dlg.getBtnInnerColor().setBackground(frame.getActiveInnerColor());
+	        dlg.setVisible(true);
+	        
+	        if (dlg.isOk) {
+	            try {
+	                d.setRadius(Integer.parseInt(dlg.getTextRadius().getText()));
+	                d.setInnerRadius(Integer.parseInt(dlg.getTextInnerRadius().getText()));
+	                d.setColor(dlg.getBtnBorderColor().getBackground());
+	                d.setInnerColor(dlg.getBtnInnerColor().getBackground());
+	                commandManager.executeCommand(new AddShape(model, d, this));
+	            } catch (Exception ex) {
+	                JOptionPane.showMessageDialog(null, "Invalid value", "Error", JOptionPane.ERROR_MESSAGE);
+	            }
+	        }
+	    }
+	    
+	    private void handleRectangleDrawing(MouseEvent e) {
+	        Rectangle r = new Rectangle();
+	        r.setUpperLeftPoint(new Point(e.getX(), e.getY()));
+	        
+	        DlgRectangle dlg = new DlgRectangle();
+	        dlg.getTextX().setText(e.getX() + "");
+	        dlg.getTextY().setText(e.getY() + "");
+	        dlg.getBtnBorderColor().setBackground(frame.getActiveBorderColor());
+	        dlg.getBtnInnerColor().setBackground(frame.getActiveInnerColor());
+	        dlg.setVisible(true);
+	        
+	        if (dlg.isOk) {
+	            try {
+	                r.setHeight(Integer.parseInt(dlg.getTextHeight().getText()));
+	                r.setWidth(Integer.parseInt(dlg.getTextWidth().getText()));
+	                r.setColor(dlg.getBtnBorderColor().getBackground());
+	                r.setInnerColor(dlg.getBtnInnerColor().getBackground());
+	                commandManager.executeCommand(new AddShape(model, r, this));
+	            } catch (Exception ex) {
+	                JOptionPane.showMessageDialog(null, "Invalid value", "Error", JOptionPane.ERROR_MESSAGE);
+	            }
+	        }
+	    }
+	    
+	    private void handleHexagonDrawing(MouseEvent e) {
+	        DlgHexagon dlg = new DlgHexagon();
+	        dlg.getTextX().setText(e.getX() + "");
+	        dlg.getTextY().setText(e.getY() + "");
+	        dlg.getBtnBorderColor().setBackground(frame.getActiveBorderColor());
+	        dlg.getBtnInnerColor().setBackground(frame.getActiveInnerColor());
+	        dlg.setVisible(true);
+	        
+	        if (dlg.isOk) {
+	            try {
+	                int x = Integer.parseInt(dlg.getTextX().getText());
+	                int y = Integer.parseInt(dlg.getTextY().getText());
+	                int r = Integer.parseInt(dlg.getTextR().getText());
+	                Color border = dlg.getBtnBorderColor().getBackground();
+	                Color inner = dlg.getBtnInnerColor().getBackground();
+	                
+	                HexagonAdapter h = new HexagonAdapter(x, y, r, border, inner, false);
+	                commandManager.executeCommand(new AddShape(model, h, this));
+	            } catch (Exception ex) {
+	                JOptionPane.showMessageDialog(null, "Invalid values", "Error", JOptionPane.ERROR_MESSAGE);
+	            }
+	        }
+	    }
+	    
+	
+	  private void handleSelection(Point p) {
+	        int hitIndex = -1;
+	        
+	        for (int i = model.size() - 1; i >= 0; i--) {
+	            if (model.getShape(i).contains(p.getX(), p.getY())) {
+	                hitIndex = i;
+	                break;
+	            }
+	        }
+	        
+	        if (hitIndex == -1) {
+	            model.deselectAll();
+	        } else {
+	            Shape s = model.getShape(hitIndex);
+	            s.setSelected(!s.isSelected());
+	            model.notifyObservers();
+	        }
+	        
+	        frame.selectionChanged(model.getSelectedCount());
+	    }
+	  
     
 	@Override
 	public void paint(Graphics g) {
 		// TODO Auto-generated method stub
 		super.paint(g);
 		
-		Iterator<Shape> it = shapes.iterator();
-		while (it.hasNext())
-			it.next().draw(g); 
+		for (Shape s : model.getShapes()) {
+            s.draw(g);
+        }
 	}
 	
-		public ArrayList<Shape> getShapes() {
+	@Override
+	public void update() {
+		repaint();
+    }
+	
+	public ArrayList<Shape> getShapes() {
 		return shapes;
 	}
 
@@ -279,50 +293,49 @@ public class PnlDraw extends JPanel {
 
 	private void handlePopup(MouseEvent e) {
 	    if (!e.isPopupTrigger()) return;
-
+	    
 	    selectAt(e.getX(), e.getY());
-
+	    System.out.println("Selected index = " + model.getLastSelectedIndex());
 	    updatePopupItems();
 
-	    if (indexOfSelectedElement != -1) {
-	        popup.show(PnlDraw.this, e.getX(), e.getY());
-	    }
+	    int selectedIndex = model.getLastSelectedIndex();
+        if (selectedIndex != -1) {
+            popup.show(PnlDraw.this, e.getX(), e.getY());
+        }
 	}
 	
 	private void runZOrder(ZAxisAction action) {
-	    int idx = getIndexOfSelectedElement();
+	    int idx = model.getLastSelectedIndex();
 	    if (idx == -1) return;
 
-	    ZAxisCommand cmd = new ZAxisCommand(shapes, idx, action, this);
+	    ZAxisCommand cmd = new ZAxisCommand(model, idx, action, this);
 	    frame.getCommandManager().executeCommand(cmd);
 
 	    setIndexOfSelectedElement(cmd.getNewIndex());
 
 	    frame.updateUndoRedoButtons(); 
 	}
-	private void selectAt(int x, int y) {
-	    for (Shape s : shapes) s.setSelected(false);
-	    indexOfSelectedElement = -1;
-
-	    for (int i = shapes.size() - 1; i >= 0; i--) {
-	        if (shapes.get(i).contains(x, y)) {
-	            shapes.get(i).setSelected(true);
-	            indexOfSelectedElement = i;
-	            break;
-	        }
-	    }
-	    repaint();
-	}
+    private void selectAt(int x, int y) {
+        model.deselectAll();
+        
+        for (int i = model.size() - 1; i >= 0; i--) {
+            if (model.getShape(i).contains(x, y)) {
+                model.getShape(i).setSelected(true);
+                model.notifyObservers();
+                break;
+            }
+        }
+    }
 	private void updatePopupItems() {
-	    int idx = indexOfSelectedElement;
-	    int last = shapes.size() - 1;
+		  int idx = model.getLastSelectedIndex();
+		    int size = model.size();
 
-	    boolean has = idx != -1;
-	    miToFront.setEnabled(has && idx < last);
-	    miBringToFront.setEnabled(has && idx < last);
+		    boolean enabled = idx != -1;
 
-	    miToBack.setEnabled(has && idx > 0);
-	    miBringToBack.setEnabled(has && idx > 0);
+		    miToFront.setEnabled(enabled);
+		    miToBack.setEnabled(enabled);
+		    miBringToFront.setEnabled(enabled);
+		    miBringToBack.setEnabled(enabled);
 	}
 	public int getSelectedCount() {
 	    int c = 0;

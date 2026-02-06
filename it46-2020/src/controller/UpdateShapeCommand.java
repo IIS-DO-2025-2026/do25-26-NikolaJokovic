@@ -3,6 +3,7 @@ package controller;
 import java.awt.Color;
 import java.util.ArrayList;
 
+import draw.DrawingModel;
 import draw.PnlDraw;
 import geometrija.Circle;
 import geometrija.Donut;
@@ -13,15 +14,15 @@ import geometrija.Shape;
 
 public class UpdateShapeCommand implements Command {
 
-	private final ArrayList<Shape> shapes;
+	private final DrawingModel model;
     private final int index;
     private final PnlDraw panel;
 
     private final Shape oldState;
     private final Shape newState; 
 
-    public UpdateShapeCommand(ArrayList<Shape> shapes, int index, Shape oldState, Shape newState, PnlDraw panel) {
-        this.shapes = shapes;
+    public UpdateShapeCommand(DrawingModel model, int index, Shape oldState, Shape newState, PnlDraw panel) {
+        this.model=model;
         this.index = index;
         this.oldState = oldState;
         this.newState = newState;
@@ -30,14 +31,22 @@ public class UpdateShapeCommand implements Command {
 
     @Override
     public void execute() {
-        shapes.set(index, newState);
-        panel.repaint();
+    	
+            model.updateShape(index, newState);  
+        
+        if (panel != null) {
+            panel.repaint();
+        }
     }
 
     @Override
     public void unexecute() {
-        shapes.set(index, oldState);
-        panel.repaint();
+    	
+            model.updateShape(index, oldState);  
+        
+        if (panel != null) {
+            panel.repaint();
+        }
     }
     @Override
 	public String toLog() {

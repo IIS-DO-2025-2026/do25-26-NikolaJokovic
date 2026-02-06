@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.swing.JComponent;
 
+import draw.DrawingModel;
 import geometrija.Circle;
 import geometrija.Donut;
 import geometrija.HexagonAdapter;
@@ -15,28 +16,37 @@ import geometrija.Shape;
 
 public class RemoveShape implements Command{
 
-	private final List<Shape> shapes;
+	private final DrawingModel model;
 	private final int index;
-	private final Shape removed;
+	private Shape removed;
 	private final JComponent panel;
 	
 	
-	public RemoveShape(List<Shape> shapes,int index, JComponent panel) {
-		this.shapes=shapes;
+	public RemoveShape(DrawingModel model,int index, JComponent panel) {
+		this.model=model;
 		this.index= index;
-		this.removed = shapes.get(index);
 		this.panel=panel;
 	}
 	
 	@Override
 	public void execute() {
-		shapes.remove(index);
-		panel.repaint();
+		if (index >= 0 && index < model.size()) {
+            removed = model.getShape(index);  
+            model.removeShape(index);         
+        }
+        if (panel != null) {
+            panel.repaint();
+        }
 	}
 	@Override
 	public void unexecute() {
-		shapes.add(index,removed);
-		panel.repaint();
+		 if (removed != null && index >= 0) {
+	            model.getShapes().add(index, removed);
+	            model.notifyObservers(); 
+	        }
+	        if (panel != null) {
+	            panel.repaint();
+	        }
 	}
 	@Override
 	public String toLog() {

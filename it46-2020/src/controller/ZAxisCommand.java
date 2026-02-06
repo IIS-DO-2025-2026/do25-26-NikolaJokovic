@@ -4,19 +4,20 @@ import java.util.List;
 
 import javax.swing.JComponent;
 
+import draw.DrawingModel;
 import geometrija.Shape;
 
 public class ZAxisCommand implements Command {
 
-	private final List<Shape> shapes;
+	private final DrawingModel model;
 	private final JComponent panel;
 	private final ZAxisAction action;
 	
 	private int oldIndex;
 	private int newIndex;
 	
-	public ZAxisCommand (List<Shape> shapes, int selectedIndex, ZAxisAction action, JComponent panel) {
-		this.shapes=shapes;
+	public ZAxisCommand (DrawingModel model, int selectedIndex, ZAxisAction action, JComponent panel) {
+		this.model=model;
 		this.oldIndex= selectedIndex;
 		this.action= action;
 		this.panel=panel;
@@ -25,9 +26,10 @@ public class ZAxisCommand implements Command {
 	
 	@Override
 	public void execute() {
-		if (oldIndex < 0 || oldIndex >= shapes.size()) return;
-
-		int last = shapes.size() - 1;
+		if (oldIndex < 0 || oldIndex >= model.size()) return;
+        
+        int last = model.size() - 1;
+        newIndex = oldIndex;
 		switch (action) {
 			case TO_FRONT:
 				if (oldIndex == last) return;
@@ -49,20 +51,33 @@ public class ZAxisCommand implements Command {
 				return;
 	        }
 
-	        move(oldIndex, newIndex);
-	        panel.repaint();
+		 if (newIndex != oldIndex) {
+	            Shape shape = model.getShapes().remove(oldIndex);
+	            model.getShapes().add(newIndex, shape);
+	            model.notifyObservers(); 
+	        }
+	        
+	        if (panel != null) {
+	            panel.repaint();
+	        }
 	}
 	
 	@Override
 	public void unexecute() {
-		if (newIndex < 0 || newIndex >= shapes.size()) return;
-	        move(newIndex, oldIndex);
-	        panel.repaint();
+		 if (newIndex < 0 || newIndex >= model.size()) return;
+	        
+	        Shape shape = model.getShapes().remove(newIndex);
+	        model.getShapes().add(oldIndex, shape);
+	        model.notifyObservers();  
+	        
+	        if (panel != null) {
+	            panel.repaint();
+	        }
 	    }
-    private void move(int from, int to) {
-        Shape s = shapes.remove(from);
+    /*private void move(int from, int to) {
+        Shape s = model.remove(from);
         shapes.add(to, s);
-    }
+    }*/
 
     public int getNewIndex() {
         return newIndex;

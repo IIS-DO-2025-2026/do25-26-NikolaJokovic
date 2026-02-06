@@ -31,10 +31,7 @@ public class DlgCircle extends JDialog {
 	private JButton btnInnerColor;
 	private JButton btnBorderColor;
 	
-
-	/**
-	 * Launch the application.
-	 */
+	
 	public static void main(String[] args) {
 		try {
 			DlgCircle dialog = new DlgCircle();
@@ -45,9 +42,6 @@ public class DlgCircle extends JDialog {
 		}
 	}
 
-	/**
-	 * Create the dialog.
-	 */
 	public DlgCircle() {
 		
 		setResizable(false);

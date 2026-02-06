@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.swing.JComponent;
 
+import draw.DrawingModel;
 import geometrija.Circle;
 import geometrija.Donut;
 import geometrija.HexagonAdapter;
@@ -15,26 +16,34 @@ import geometrija.Shape;
 
 public class AddShape implements Command{
 	
-	private final List<Shape> shapes;
+	private final DrawingModel model;
 	private final Shape shape;
 	private final JComponent panel;
+	private int addedIndex=-1;
 	
-	public AddShape(List<Shape> shapes, Shape shape, JComponent panel) {
-		this.shapes=shapes;
+	public AddShape(DrawingModel model, Shape shape, JComponent panel) {
+		this.model=model;
 		this.panel= panel;
 		this.shape=shape;
 	} 
 	
 	@Override
 	public void execute() {
-		shapes.add(shape);
-		panel.repaint();
+		addedIndex = model.size();  
+        model.addShape(shape);      
+        if (panel != null) {
+            panel.repaint();
+        }
 	}
 	
 	@Override
 	public void unexecute() {
-		shapes.remove(shape);
-		panel.repaint();
+		   if (addedIndex >= 0 && addedIndex < model.size()) {
+	            model.removeShape(addedIndex);  
+	        }
+	        if (panel != null) {
+	            panel.repaint();
+	        }
 	}
 	
 	@Override

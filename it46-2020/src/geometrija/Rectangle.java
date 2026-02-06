@@ -3,8 +3,9 @@ package geometrija;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.io.Serializable;
 
-public class Rectangle extends SurfaceShape {
+public class Rectangle extends SurfaceShape implements Serializable{
 
 	public int width;
 	public int height;

@@ -3,8 +3,9 @@ package geometrija;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.io.Serializable;
 
-public class Circle extends SurfaceShape{
+public class Circle extends SurfaceShape implements Serializable{
 	
 	private Point center;
 	private int radius;

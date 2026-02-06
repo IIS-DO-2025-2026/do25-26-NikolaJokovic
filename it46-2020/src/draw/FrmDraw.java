@@ -37,7 +37,10 @@ import javax.swing.border.LineBorder;
 import controller.Command;
 import controller.CommandFactory;
 import controller.CommandManager;
+import controller.ModelObserver;
 import controller.RemoveShape;
+import controller.SaveDrawingStrategy;
+import controller.SaveStrategy;
 import controller.TextLog;
 import controller.UpdateShapeCommand;
 
@@ -75,6 +78,8 @@ public class FrmDraw extends JFrame {
 	private JButton btnActiveBorder;
 	private JButton btnActiveInner;
 	
+	private DrawingModel model;
+	
 	public Color getActiveBorderColor() { return activeBorderColor; }
 	public Color getActiveInnerColor()  { return activeInnerColor; }
 	
@@ -108,6 +113,8 @@ public class FrmDraw extends JFrame {
 		setTitle("IT 46-2020 Nikola Jokovic");
 		setBounds(100, 100, 580, 400);
 		
+		model=new DrawingModel();
+		
 		menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
 		
@@ -131,7 +138,7 @@ public class FrmDraw extends JFrame {
 			}
 		});
 		
-		JMenuItem miSaveLog = new JMenuItem("Save log...");
+		JMenuItem miSaveLog = new JMenuItem("Save log");
 		miSaveLog.addActionListener(e -> {
 		    JFileChooser fc = new JFileChooser();
 		    if (fc.showSaveDialog(FrmDraw.this) == JFileChooser.APPROVE_OPTION) {
@@ -146,14 +153,14 @@ public class FrmDraw extends JFrame {
 		});
 		mnNewMenu.add(miSaveLog);
 		
-		JMenuItem miLoadLog = new JMenuItem("Load log...");
+		JMenuItem miLoadLog = new JMenuItem("Load log");
 		miLoadLog.addActionListener(e -> {
 		    JFileChooser fc = new JFileChooser();
 		    if (fc.showOpenDialog(FrmDraw.this) == JFileChooser.APPROVE_OPTION) {
 		        File f = fc.getSelectedFile();
 		        try {
 		            List<String> lines = new TextLog().load(f);
-		            replayLog(lines); // <<< OVO DODAJ
+		            replayLog(lines);
 		        } catch (Exception ex) {
 		            JOptionPane.showMessageDialog(FrmDraw.this, "Load failed: " + ex.getMessage());
 		        }
@@ -161,7 +168,38 @@ public class FrmDraw extends JFrame {
 		});
 		mnNewMenu.add(miLoadLog);
 		
-		
+		JMenuItem miSaveDrawing = new JMenuItem("Save drawing");
+		miSaveDrawing.addActionListener(e -> {
+		    JFileChooser fc = new JFileChooser();
+		    if (fc.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+		        try {
+		            SaveStrategy strategy = new SaveDrawingStrategy();
+		            strategy.save( fc.getSelectedFile(),model.getShapes());
+		            JOptionPane.showMessageDialog(this, "Drawing saved.");
+		        } catch (Exception ex) {
+		            JOptionPane.showMessageDialog(this, "Save failed: " + ex.getMessage());
+		        }
+		    }
+		});
+		mnNewMenu.add(miSaveDrawing);
+
+		JMenuItem miLoadDrawing = new JMenuItem("Load drawing");
+		miLoadDrawing.addActionListener(e -> {
+		    JFileChooser fc = new JFileChooser();
+		    if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+		        try {
+		            SaveStrategy strategy = new SaveDrawingStrategy();
+		            List<Shape> loaded = strategy.load(fc.getSelectedFile());
+		            model.setShapes(new ArrayList<>(loaded));
+		            model.notifyObservers();
+		            pnlCenter.repaint();
+		            JOptionPane.showMessageDialog(this, "Drawing loaded.");
+		        } catch (Exception ex) {
+		            JOptionPane.showMessageDialog(this, "Load failed: " + ex.getMessage());
+		        }
+		    }
+		});
+		mnNewMenu.add(miLoadDrawing);
 		
 		btnUndo = new JButton("↶");
 		btnRedo = new JButton("↷");
@@ -200,7 +238,7 @@ public class FrmDraw extends JFrame {
 		contentPane.setLayout(new BorderLayout(0, 0));
 		setContentPane(contentPane);
 		
-		 pnlCenter = new PnlDraw(this);
+		pnlCenter = new PnlDraw(this,model);
 		contentPane.add(pnlCenter, BorderLayout.CENTER);
 		pnlCenter.setBackground(Color.white);
 		
@@ -362,17 +400,18 @@ public class FrmDraw extends JFrame {
 		panel.add(btnDelete, gbc_btnDelete);
 		btnDelete.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(pnlCenter.getIndexOfSelectedElement() == -1) {
-					JOptionPane.showMessageDialog(null, "Please select shape you want to delete", "Error", JOptionPane.ERROR_MESSAGE);				
-				}
-				else {
+				int selectedIndex = model.getFirstSelectedIndex();
+		        if (selectedIndex == -1) {
+		            JOptionPane.showMessageDialog(null, "Please select shape you want to edit", "Error", JOptionPane.ERROR_MESSAGE);
+		        } else {
+		            Shape selectedShape = model.getShape(selectedIndex);
 					int a=JOptionPane.showConfirmDialog(null,"Are you sure?");  
 					if(a==JOptionPane.YES_OPTION){  
-						ArrayList<Shape> shapes = pnlCenter.getShapes();
+						ArrayList<Shape> shapes = model.getShapes();
 
 						for (int i = shapes.size() - 1; i >= 0; i--) {
 						    if (shapes.get(i).isSelected()) {
-						        commandManager.executeCommand(new RemoveShape(shapes, i, pnlCenter));
+						        commandManager.executeCommand(new RemoveShape(model, i, pnlCenter));
 						    }
 						}
 						pnlCenter.setIndexOfSelectedElement(-1);
@@ -385,11 +424,11 @@ public class FrmDraw extends JFrame {
 		});
 		btnEdit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if(pnlCenter.getIndexOfSelectedElement() == -1) {
-					JOptionPane.showMessageDialog(null, "Please select shape you want to edit", "Error", JOptionPane.ERROR_MESSAGE);
-				}
-				else {
-					Shape selectedShape = pnlCenter.getShapes().get(pnlCenter.getIndexOfSelectedElement());
+				int selectedIndex = model.getFirstSelectedIndex();
+		        if (selectedIndex == -1) {
+		            JOptionPane.showMessageDialog(null, "Please select shape you want to edit", "Error", JOptionPane.ERROR_MESSAGE);
+		        } else {
+		            Shape selectedShape = model.getShape(selectedIndex);
 					
 					if(selectedShape instanceof Point) {	
 						Point oldPoint= (Point) selectedShape;
@@ -409,7 +448,7 @@ public class FrmDraw extends JFrame {
 								Shape newState = pEdited.clone();
 								
 								commandManager.executeCommand(
-						                new UpdateShapeCommand(pnlCenter.getShapes(), pnlCenter.getIndexOfSelectedElement(), oldState, newState, pnlCenter)
+						                new UpdateShapeCommand(model, model.getLastSelectedIndex(), oldState, newState, pnlCenter)
 						            );
 								updateUndoRedoButtons();
 					            pnlCenter.setIndexOfSelectedElement(-1);
@@ -441,7 +480,7 @@ public class FrmDraw extends JFrame {
 							Shape newState = lEdited.clone();
 							
 							commandManager.executeCommand(
-					                new UpdateShapeCommand(pnlCenter.getShapes(), pnlCenter.getIndexOfSelectedElement(), oldState, newState, pnlCenter)
+					                new UpdateShapeCommand(model, model.getLastSelectedIndex(), oldState, newState, pnlCenter)
 					            );
 							updateUndoRedoButtons();
 				            pnlCenter.setIndexOfSelectedElement(-1);
@@ -479,7 +518,7 @@ public class FrmDraw extends JFrame {
 								Shape newState = dEdited.clone();
 								
 								commandManager.executeCommand(
-						                new UpdateShapeCommand(pnlCenter.getShapes(), pnlCenter.getIndexOfSelectedElement(), oldState, newState, pnlCenter)
+						                new UpdateShapeCommand(model, model.getLastSelectedIndex(), oldState, newState, pnlCenter)
 						            );
 								updateUndoRedoButtons();
 					            pnlCenter.setIndexOfSelectedElement(-1);
@@ -522,7 +561,7 @@ public class FrmDraw extends JFrame {
 								cEdited.setInnerColor(editCircle.getBtnInnerColor().getBackground());
 								
 								Shape newState= cEdited.clone();
-								commandManager.executeCommand(new UpdateShapeCommand(pnlCenter.getShapes(), pnlCenter.getIndexOfSelectedElement(), oldState, newState, pnlCenter));
+								commandManager.executeCommand(new UpdateShapeCommand(model, model.getLastSelectedIndex(), oldState, newState, pnlCenter));
 								updateUndoRedoButtons();
 						        pnlCenter.setIndexOfSelectedElement(-1);
 						        selectionChanged(0);
@@ -564,7 +603,7 @@ public class FrmDraw extends JFrame {
 								
 								Shape newState= rEdited.clone();
 								commandManager.executeCommand(
-						                new UpdateShapeCommand(pnlCenter.getShapes(), pnlCenter.getIndexOfSelectedElement(), oldState, newState, pnlCenter)
+						                new UpdateShapeCommand(model, model.getLastSelectedIndex(), oldState, newState, pnlCenter)
 						            );
 								
 								updateUndoRedoButtons();
@@ -603,7 +642,7 @@ public class FrmDraw extends JFrame {
 								Shape newState= hEdited.clone();
 								
 								commandManager.executeCommand(
-						                new UpdateShapeCommand(pnlCenter.getShapes(), pnlCenter.getIndexOfSelectedElement(), oldState, newState, pnlCenter)
+						                new UpdateShapeCommand(model, model.getLastSelectedIndex(), oldState, newState, pnlCenter)
 						            );
 								updateUndoRedoButtons();
 					            pnlCenter.setIndexOfSelectedElement(-1);
@@ -619,10 +658,22 @@ public class FrmDraw extends JFrame {
 					pnlCenter.repaint();
 				}
 			}
+			
 		});
-		
+	model.addObserver(new ModelObserver() {
+		@Override
+		public void update() {
+			int count= model.getSelectedCount();
+			btnDelete.setEnabled(count>0);
+			btnEdit.setEnabled(count==1);
+		}
+	});
 	
 	}
+	
+	public DrawingModel getModel() {
+        return model;
+    }
 	public void updateUndoRedoButtons() {
 	    boolean canUndo = commandManager.canUndo();
 	    boolean canRedo = commandManager.canRedo();
@@ -677,7 +728,7 @@ public class FrmDraw extends JFrame {
 	
 	private void replayLog(List<String> lines) {
 	    for (String line : lines) {
-	    	 Command cmd = CommandFactory.fromLog(line, pnlCenter.getShapes(), pnlCenter);
+	    	 Command cmd = CommandFactory.fromLog(line, model.getShapes(), pnlCenter);
 
 	    	    int a = JOptionPane.showConfirmDialog(this, "Execute next?\n" + line, "Replay",
 	    	            JOptionPane.YES_NO_OPTION);

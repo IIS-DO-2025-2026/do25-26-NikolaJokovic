@@ -34,9 +34,7 @@ public class DlgDonut extends JDialog {
 	private JButton btnBorderColor;
 	private JButton btnInnerColor;
 
-	/**
-	 * Launch the application.
-	 */
+	
 	public static void main(String[] args) {
 		try {
 			DlgDonut dialog = new DlgDonut();
@@ -47,9 +45,7 @@ public class DlgDonut extends JDialog {
 		}
 	}
 
-	/**
-	 * Create the dialog.
-	 */
+
 	public DlgDonut() {
 		setResizable(false);
 		setTitle("Create a donut:");

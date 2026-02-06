@@ -2,10 +2,11 @@ package geometrija;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.io.Serializable;
 
 import controller.Moveable;
 
-public abstract class Shape implements Moveable, Comparable{
+public abstract class Shape implements Moveable, Comparable,Serializable{
 	
 	private boolean selected;
 	private Color color;
